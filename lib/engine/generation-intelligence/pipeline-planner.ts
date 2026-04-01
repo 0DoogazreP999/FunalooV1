@@ -17,6 +17,14 @@ function buildPhase(name: string, minutes: number, goal: string, outputs: string
 
 function runtimeSpecificTracks(archetype: GenerationRuntimeArchetype) {
   switch (archetype) {
+    case "rpg_adventure":
+      return ["Quest authoring", "Character progression tuning", "Exploration and discovery tuning"]
+    case "racing_sim":
+      return ["Track authoring", "Vehicle physics tuning", "AI opponent tuning"]
+    case "stealth_infiltration":
+      return ["Level authoring", "Guard patrol and AI tuning", "Gadget and ability tuning"]
+    case "puzzle_solver":
+      return ["Puzzle authoring", "Hint system tuning", "Progression and difficulty tuning"]
     case "survival_expedition_3d":
       return ["3D scavenging district authoring", "Safehouse upgrade and repair tuning", "Zombie pressure and extraction tuning"]
     case "action_operation_3d":
@@ -41,13 +49,15 @@ export function planGenerationPipeline(input: {
   resolvedFeatures: string[]
   scopeScale: "focused" | "expanded" | "limitless"
   runtimeArchetype: GenerationRuntimeArchetype
+  scope: "small" | "medium" | "large"
 }): GenerationPipelinePlan {
   const baseTargetMinutes =
-    input.scopeScale === "focused"
-      ? 45
-      : input.scopeScale === "expanded"
-        ? 70
+    input.scope === "small"
+      ? 30
+      : input.scope === "medium"
+        ? 60
         : 90
+
   const runtimePremium =
     input.runtimeArchetype === "survival_expedition_3d" || input.runtimeArchetype === "action_operation_3d"
       ? 5

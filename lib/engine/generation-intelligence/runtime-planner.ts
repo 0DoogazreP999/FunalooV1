@@ -17,6 +17,14 @@ function pickRuntimeReason(input: {
   prompt: string
 }) {
   switch (input.archetype) {
+    case "rpg_adventure":
+      return "The prompt asks for a classic RPG experience, so the runtime should focus on questing, character progression, and exploration."
+    case "racing_sim":
+      return "The prompt asks for a racing simulation, so the runtime should focus on vehicle physics, track design, and competitive racing."
+    case "stealth_infiltration":
+      return "The prompt asks for a stealth experience, so the runtime should focus on sneaking, evasion, and silent takedowns."
+    case "puzzle_solver":
+      return "The prompt asks for a puzzle-solving experience, so the runtime should focus on logic puzzles, environmental challenges, and brain-teasers."
     case "survival_expedition_3d":
       if (hasPromptMatch(input.prompt, /zombie|undead|infected|horde|scavenge|shelter|safehouse|repair|outpost|survival horror/)) {
         return "The brief asks for a direct-avatar 3D survival fantasy, so the runtime must preserve scavenging, shelter upkeep, traversal, and hostile pressure instead of flattening into fortify-only command play."
@@ -154,6 +162,10 @@ export function selectRuntimeArchetype(input: {
   if (journeyHeavy && !hasCombat && !zombieHeavy && !shooterHeavy) {
     return "journey_route"
   }
+  if (input.genre === "rpg") { return "rpg_adventure" }
+  if (input.genre === "racing") { return "racing_sim" }
+  if (stealthHeavy) { return "stealth_infiltration" }
+  if (puzzleHeavy) { return "puzzle_solver" }
 
   if (input.genre === "simulation" && !hasCombat) {
     return peaceful ? "homestead_life" : "strategy_command"
@@ -193,6 +205,98 @@ export function planGenerationRuntime(input: {
   const threeD = input.dimension === "3d"
 
   switch (archetype) {
+    case "rpg_adventure":
+      return {
+        archetype,
+        label: "RPG Adventure Runtime",
+        reason: pickRuntimeReason({ ...input, archetype }),
+        cameraModel: threeD ? "Third-person adventure camera" : "Top-down RPG camera",
+        targetSessionMinutes: 30,
+        inputModel: "Explore the world, complete quests, and develop your character.",
+        playFocus: ["Quest completion", "Character progression", "Exploration"],
+        uiFocus: ["Quest log", "Character sheet", "Inventory"],
+        contentStrategy: [
+          "Create a main quest line with a clear objective.",
+          "Develop a variety of side quests to encourage exploration.",
+          "Implement a robust character progression system.",
+        ],
+        winCondition: "Complete the main quest.",
+        failCondition: "The player character dies or abandons the main quest.",
+        antiCollapseRules: [
+          "Do not collapse into a simple combat arena.",
+          "Ensure that quests are meaningful and not just fetch quests.",
+          "Character progression should be a core focus.",
+        ],
+      }
+    case "racing_sim":
+      return {
+        archetype,
+        label: "Racing Sim Runtime",
+        reason: pickRuntimeReason({ ...input, archetype }),
+        cameraModel: threeD ? "In-car or chase camera" : "Top-down racing camera",
+        targetSessionMinutes: 15,
+        inputModel: "Control a vehicle and race against opponents on a variety of tracks.",
+        playFocus: ["Vehicle handling", "Track mastery", "Competitive racing"],
+        uiFocus: ["Speedometer", "Lap timer", "Position indicator"],
+        contentStrategy: [
+          "Design a variety of tracks with different challenges.",
+          "Implement realistic vehicle physics and handling.",
+          "Create a competitive AI to race against.",
+        ],
+        winCondition: "Finish the race in first place.",
+        failCondition: "The player's vehicle is destroyed or they are disqualified.",
+        antiCollapseRules: [
+          "Do not simplify into a basic arcade racer.",
+          "Vehicle physics and handling should be a core focus.",
+          "Tracks should be well-designed and challenging.",
+        ],
+      }
+    case "stealth_infiltration":
+      return {
+        archetype,
+        label: "Stealth Infiltration Runtime",
+        reason: pickRuntimeReason({ ...input, archetype }),
+        cameraModel: threeD ? "Third-person or first-person stealth camera" : "Top-down stealth camera",
+        targetSessionMinutes: 20,
+        inputModel: "Infiltrate a secure location, avoid detection, and complete objectives.",
+        playFocus: ["Sneaking and evasion", "Silent takedowns", "Objective completion"],
+        uiFocus: ["Detection meter", "Guard patrol routes", "Objective markers"],
+        contentStrategy: [
+          "Design levels with multiple paths and opportunities for stealth.",
+          "Implement a robust AI for guards and other enemies.",
+          "Create a variety of tools and abilities to support stealth gameplay.",
+        ],
+        winCondition: "Complete the main objective without being detected.",
+        failCondition: "The player is detected or eliminated.",
+        antiCollapseRules: [
+          "Do not collapse into a simple action game.",
+          "Stealth and evasion should be the primary focus.",
+          "Level design should support and encourage stealth gameplay.",
+        ],
+      }
+    case "puzzle_solver":
+      return {
+        archetype,
+        label: "Puzzle Solver Runtime",
+        reason: pickRuntimeReason({ ...input, archetype }),
+        cameraModel: threeD ? "First-person or third-person puzzle camera" : "Top-down puzzle camera",
+        targetSessionMinutes: 25,
+        inputModel: "Solve a series of logic puzzles and environmental challenges.",
+        playFocus: ["Logic puzzles", "Environmental challenges", "Brain-teasers"],
+        uiFocus: ["Puzzle elements", "Clues and hints", "Progress tracker"],
+        contentStrategy: [
+          "Design a variety of puzzles with different mechanics.",
+          "Create a cohesive world and narrative to tie the puzzles together.",
+          "Implement a hint system to help players who are stuck.",
+        ],
+        winCondition: "Solve all the puzzles and complete the game.",
+        failCondition: "The player is unable to solve a puzzle and gives up.",
+        antiCollapseRules: [
+          "Do not simplify puzzles to the point of being trivial.",
+          "Puzzles should be logical and solvable.",
+          "The game should have a clear sense of progression.",
+        ],
+      }
     case "survival_expedition_3d":
       return {
         archetype,

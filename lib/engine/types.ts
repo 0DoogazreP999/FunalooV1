@@ -119,6 +119,10 @@ export type GenerationRuntimeArchetype =
   | "homestead_life"
   | "strategy_command"
   | "action_operation_3d"
+  | "rpg_adventure"
+  | "racing_sim"
+  | "stealth_infiltration"
+  | "puzzle_solver"
 export type GenerationFeedbackScoreBand = "failed" | "1-2" | "3-4" | "5-6" | "7-8" | "9-10"
 
 // ── Branded Identity Types ───────────────────────────────────

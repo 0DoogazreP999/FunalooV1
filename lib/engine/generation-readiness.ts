@@ -1,3 +1,4 @@
+
 import { AGENT_KNOWLEDGE, AGENTS_LIST } from "@/lib/engine/agents"
 import { buildFeedbackLearningReport } from "@/lib/engine/feedback-learning"
 import { buildGenerationProviderDiagnosticsSummary } from "@/lib/engine/provider-diagnostics"
@@ -7,11 +8,7 @@ import type {
   ProjectWorkspaceFile,
   UserProject,
 } from "@/lib/engine/types"
-
-type ProjectGenerationSnapshot = Pick<
-  UserProject,
-  "name" | "description" | "genre" | "dimension" | "engine" | "features" | "multiplayer" | "maxPlayers" | "llmConfiguration" | "design" | "systems" | "codeFiles" | "assetFiles" | "feedback"
->
+import { pluginRegistry } from "@/lib/engine/plugin"
 
 export interface ProjectSystemAgentAssignment {
   systemName: string
@@ -180,36 +177,15 @@ const AGENT_ASSIGNMENT_RULES: Array<{
   },
 ]
 
-const REQUIRED_ASSET_FILES = [
-  "ProjectManifest.json",
-  "PromptInterpretation.asset.json",
-  "GenerationPipeline.asset.json",
-  "GenerationLoop.asset.json",
-  "LoopPromptPackets.asset.json",
-  "GenerationOperations.asset.json",
-  "ProviderDiagnostics.asset.json",
-  "GenerationInputBoundary.asset.json",
-  "KnowledgeCoverage.asset.json",
-  "KnowledgeRisk.asset.json",
-  "UsageIntelligence.asset.json",
-  "EvolutionContext.asset.json",
-  "EvolutionInsertionBlocks.asset.json",
-  "GenerationContext.asset.json",
-  "AgentBriefing.asset.json",
-  "GenerationVerification.asset.json",
-  "CompileReadiness.asset.json",
-  "RuntimeEncounterCadence.asset.json",
-]
-
 function unique(values: string[]) {
   return [...new Set(values.map((value) => value.trim()).filter(Boolean))]
 }
 
-function includesNoCombatConstraint(project: ProjectGenerationSnapshot) {
+function includesNoCombatConstraint(project: UserProject) {
   return project.design.negativeConstraints.some((constraint) => /combat/i.test(constraint))
 }
 
-function includesThreeDimensionalSignals(project: ProjectGenerationSnapshot) {
+function includesThreeDimensionalSignals(project: UserProject) {
   return /3d|first[- ]person|third[- ]person|immersive/i.test([
     project.design.graphicsPlan.renderPath,
     project.design.runtimePlan.cameraModel,
@@ -222,7 +198,7 @@ function findCodeFileForSystem(systemName: string, codeFiles: ProjectWorkspaceFi
   return codeFiles.find((file) => file.name.replace(/[^a-z0-9]/gi, "").toLowerCase().includes(token))
 }
 
-function expectedCodeExtension(engine: ProjectGenerationSnapshot["engine"]) {
+function expectedCodeExtension(engine: UserProject["engine"]) {
   switch (engine) {
     case "godot":
       return ".gd"
@@ -235,7 +211,7 @@ function expectedCodeExtension(engine: ProjectGenerationSnapshot["engine"]) {
   }
 }
 
-function hasEngineCompileMarkers(file: ProjectWorkspaceFile, engine: ProjectGenerationSnapshot["engine"]) {
+function hasEngineCompileMarkers(file: ProjectWorkspaceFile, engine: UserProject["engine"]) {
   switch (engine) {
     case "godot":
       return /extends Node|class_name/i.test(file.content)
@@ -253,7 +229,7 @@ export function assignAgentToSystem(systemName: string): ProjectSystemAgentAssig
   return matchedRule?.agentName ?? "architect"
 }
 
-export function buildProjectSystemAgentAssignments(project: ProjectGenerationSnapshot): ProjectSystemAgentAssignment[] {
+export function buildProjectSystemAgentAssignments(project: UserProject): ProjectSystemAgentAssignment[] {
   return project.systems.map((system) => {
     const agentName = assignAgentToSystem(system.name)
     const rule = AGENT_ASSIGNMENT_RULES.find((entry) => entry.agentName === agentName)
@@ -269,7 +245,7 @@ export function buildProjectSystemAgentAssignments(project: ProjectGenerationSna
   })
 }
 
-export function buildProjectAgentBriefs(project: ProjectGenerationSnapshot): ProjectAgentBrief[] {
+export function buildProjectAgentBriefs(project: UserProject): ProjectAgentBrief[] {
   const assignments = buildProjectSystemAgentAssignments(project)
   const feedbackLearning = buildFeedbackLearningReport(project)
   const runtimeEncounterDirector = buildRuntimeEncounterDirector(project)
@@ -357,7 +333,7 @@ export function buildProjectAgentBriefs(project: ProjectGenerationSnapshot): Pro
   })
 }
 
-export function buildProjectGenerationContext(project: ProjectGenerationSnapshot): ProjectGenerationContext {
+export function buildProjectGenerationContext(project: UserProject): ProjectGenerationContext {
   const assignments = buildProjectSystemAgentAssignments(project)
   const agentBriefs = buildProjectAgentBriefs(project)
   const runtimeEncounterDirector = buildRuntimeEncounterDirector(project)
@@ -484,12 +460,15 @@ function buildCheck(input: {
   }
 }
 
-export function buildProjectGenerationAudit(project: ProjectGenerationSnapshot): ProjectGenerationAudit {
+export function buildProjectGenerationAudit(project: UserProject): ProjectGenerationAudit {
   const context = buildProjectGenerationContext(project)
   const checks: ProjectGenerationAuditCheck[] = []
   const codeFiles = project.codeFiles
   const assetFileNames = new Set(project.assetFiles.map((file) => file.name))
   const feedbackLearning = buildFeedbackLearningReport(project)
+  const requiredAssetFiles = pluginRegistry.getPlugins().flatMap((plugin) =>
+    plugin.execute(project).then((result) => result.outputs)
+  ) ?? []
 
   checks.push(buildCheck({
     id: "prompt_trace",
@@ -642,7 +621,7 @@ export function buildProjectGenerationAudit(project: ProjectGenerationSnapshot):
   checks.push(buildCheck({
     id: "asset_workspace",
     label: "Context and verification assets are present",
-    pass: REQUIRED_ASSET_FILES.every((fileName) => assetFileNames.has(fileName)),
+    pass: requiredAssetFiles.every((fileName) => assetFileNames.has(fileName as string)),
     severity: "high",
     detail: `${[...assetFileNames].length} asset files are present in the generated workspace.`,
     fix: "Emit manifest, context, agent briefing, pipeline, and verification assets before the project is shown.",
